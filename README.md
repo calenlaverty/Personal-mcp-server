@@ -70,12 +70,40 @@ HOST=127.0.0.1                     # Host for SSE/HTTP mode
 # SSE Configuration (for Poke.com)
 SSE_PATH=/mcp                      # SSE endpoint path
 HEARTBEAT_INTERVAL=30000           # ms - keep connection alive
-AUTH_TOKEN=                        # Optional bearer token
-
-# ngrok (for Poke.com access)
-NGROK_AUTH_TOKEN=                  # Your ngrok auth token
-NGROK_DOMAIN=                      # Optional custom domain
+AUTH_TOKEN=                        # See Security section below
 ```
+
+#### Security: AUTH_TOKEN Configuration
+
+**When using SSE mode with remote access (e.g., via ngrok for Poke.com), you MUST set an AUTH_TOKEN to prevent unauthorized access to your Hevy data.**
+
+Generate a secure token using either method:
+
+**Option 1: Using the built-in script**
+```bash
+npm run generate-token
+```
+
+**Option 2: Using OpenSSL**
+```bash
+openssl rand -hex 32
+```
+
+Then add the generated token to your `.env` file:
+```bash
+AUTH_TOKEN=your_generated_token_here
+```
+
+When connecting from Poke.com, include the token in the Authorization header:
+```
+Authorization: Bearer your_generated_token_here
+```
+
+**Security Notes:**
+- ✅ **REQUIRED** for SSE mode with public/ngrok access
+- ❌ **Optional** for stdio mode (Claude Desktop)
+- ❌ **Optional** for SSE mode on localhost only
+- ⚠️  Never commit your `.env` file or share your AUTH_TOKEN
 
 ### 3. Build the Project
 
@@ -122,26 +150,36 @@ The Hevy tools will now be available in Claude Desktop.
 
 ### For Poke.com (SSE mode)
 
-#### 1. Start the server in SSE mode:
+#### 1. Generate and set AUTH_TOKEN:
+
+**IMPORTANT:** For security, generate an AUTH_TOKEN before exposing your server:
 
 ```bash
-# In .env, set TRANSPORT=sse
+npm run generate-token
+# Copy the generated token to your .env file
+```
+
+#### 2. Start the server in SSE mode:
+
+```bash
+# In .env, set TRANSPORT=sse and your AUTH_TOKEN
 npm start
 ```
 
-#### 2. Expose with ngrok (for remote access):
+#### 3. Expose with ngrok (for remote access):
 
 ```bash
 # In a separate terminal
 ngrok http 3000
 ```
 
-#### 3. Connect to Poke.com:
+#### 4. Connect to Poke.com:
 
 1. Go to https://poke.com/settings/connections
 2. Add new MCP connection
 3. Enter your ngrok URL: `https://your-id.ngrok.io/mcp`
-4. Test with: "Tell the subagent to use the 'hevy' integration's 'get-workouts' tool"
+4. Add Authorization header: `Bearer your_auth_token_here`
+5. Test with: "Tell the subagent to use the 'hevy' integration's 'get-workouts' tool"
 
 ## Example Usage
 
@@ -234,6 +272,8 @@ hevy-mcp-server/
 │       ├── formatters.ts     # Data formatting helpers
 │       ├── validators.ts     # Input validation with Zod
 │       └── errors.ts         # Error handling
+├── scripts/
+│   └── generate-token.ts     # AUTH_TOKEN generator utility
 ├── dist/                     # Compiled output
 ├── .env.example
 ├── package.json
@@ -263,6 +303,15 @@ Make sure you've:
 2. Check that the server is running: `curl http://localhost:3000/health`
 3. Ensure firewall allows connections on port 3000
 4. Check server logs for errors
+
+### "Unauthorized" error (401) with SSE mode
+
+If you get authentication errors when connecting to Poke.com:
+
+1. Verify `AUTH_TOKEN` is set in your `.env` file
+2. Ensure you're sending the Authorization header: `Bearer your_token_here`
+3. Check that the token in Poke.com matches exactly what's in your `.env`
+4. Regenerate the token if needed: `npm run generate-token`
 
 ## API Rate Limits
 

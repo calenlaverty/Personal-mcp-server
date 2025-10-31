@@ -10,9 +10,9 @@ import {
   safeValidateInput,
 } from '../utils/validators.js';
 
-export function registerRoutineTools(server: Server, client: HevyClient) {
-  // Define routine tools
-  const routineTools = [
+// Export routine tool definitions
+export function getRoutineTools() {
+  return [
     {
       name: 'get-routines',
       description:
@@ -166,16 +166,12 @@ export function registerRoutineTools(server: Server, client: HevyClient) {
       },
     },
   ];
+}
 
-  // Register tool list handler
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: routineTools,
-  }));
-
-  // Register tool call handler
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    try {
-      switch (request.params.name) {
+// Handle routine tool calls
+export async function handleRoutineToolCall(request: any, client: HevyClient) {
+  try {
+    switch (request.params.name) {
         case 'get-routines': {
           const validation = safeValidateInput(
             PaginationParamsSchema,
@@ -309,15 +305,7 @@ export function registerRoutineTools(server: Server, client: HevyClient) {
         }
 
         default:
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Unknown tool: ${request.params.name}`,
-              },
-            ],
-            isError: true,
-          };
+          return null; // Tool not handled by this module
       }
     } catch (error) {
       return {
@@ -330,5 +318,4 @@ export function registerRoutineTools(server: Server, client: HevyClient) {
         isError: true,
       };
     }
-  });
 }

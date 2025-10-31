@@ -224,6 +224,17 @@ export function createSSETransport(
     }
 
     const transport = new SSEServerTransport(config.ssePath, res);
+
+    // Store transport by its sessionId for message routing
+    const sessionId = (transport as any).sessionId;
+    if (sessionId) {
+      // Set the session ID header for the client
+      res.setHeader('Mcp-Session-Id', sessionId);
+
+      transports.set(sessionId, transport);
+      console.error(`Stored transport for session: ${sessionId}`);
+    }
+
     await server.connect(transport);
 
     // Keep the connection alive with heartbeats
@@ -254,8 +265,30 @@ export function createSSETransport(
   // POST endpoint for messages
   app.post(config.ssePath, async (req: Request, res: Response) => {
     try {
-      // The SSE transport handles the message routing
-      res.status(200).json({ status: 'ok' });
+      // Get sessionId from header (preferred) or query parameter (backward compatibility)
+      const sessionId =
+        (req.headers['mcp-session-id'] as string) ||
+        (req.query.sessionId as string);
+
+      if (!sessionId) {
+        console.error('POST request missing sessionId (checked header and query parameter)');
+        res.status(400).json({ error: 'Missing sessionId in Mcp-Session-Id header or sessionId query parameter' });
+        return;
+      }
+
+      // Find the transport for this session
+      const transport = transports.get(sessionId);
+
+      if (!transport) {
+        console.error(`No transport found for sessionId: ${sessionId}`);
+        console.error(`Available sessions: ${Array.from(transports.keys()).join(', ')}`);
+        res.status(404).json({ error: 'Session not found' });
+        return;
+      }
+
+      // Let the transport handle the incoming message
+      console.error(`Handling POST message for session: ${sessionId}`);
+      await transport.handlePostMessage(req, res, req.body);
     } catch (error) {
       logger.error('Error handling POST request', { path: req.path }, error as Error);
 

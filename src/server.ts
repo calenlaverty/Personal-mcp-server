@@ -1,9 +1,10 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { HevyClient } from './hevy/client.js';
-import { registerWorkoutTools } from './tools/workouts.js';
-import { registerRoutineTools } from './tools/routines.js';
-import { registerExerciseTools } from './tools/exercises.js';
-import { registerFolderTools } from './tools/folders.js';
+import { handleWorkoutToolCall, getWorkoutTools } from './tools/workouts.js';
+import { handleRoutineToolCall, getRoutineTools } from './tools/routines.js';
+import { handleExerciseToolCall, getExerciseTools } from './tools/exercises.js';
+import { handleFolderToolCall, getFolderTools } from './tools/folders.js';
 import { ConfigurationError } from './utils/errors.js';
 
 export interface ServerConfig {
@@ -36,12 +37,45 @@ export function createHevyMCPServer(config: ServerConfig): Server {
     }
   );
 
-  // Register all tool groups
-  // Note: Each tool registration adds tools to the server's tool list
-  registerWorkoutTools(server, hevyClient);
-  registerRoutineTools(server, hevyClient);
-  registerExerciseTools(server, hevyClient);
-  registerFolderTools(server, hevyClient);
+  // Collect all tools from all modules
+  const allTools = [
+    ...getWorkoutTools(),
+    ...getRoutineTools(),
+    ...getExerciseTools(),
+    ...getFolderTools(),
+  ];
+
+  // Register single ListToolsRequestSchema handler with all tools
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: allTools,
+  }));
+
+  // Register single CallToolRequestSchema handler that routes to all modules
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    // Try each module's handler until one handles the tool
+    let result = await handleWorkoutToolCall(request, hevyClient);
+    if (result) return result;
+
+    result = await handleRoutineToolCall(request, hevyClient);
+    if (result) return result;
+
+    result = await handleExerciseToolCall(request, hevyClient);
+    if (result) return result;
+
+    result = await handleFolderToolCall(request, hevyClient);
+    if (result) return result;
+
+    // If no handler processed the tool, return an error
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Unknown tool: ${request.params.name}`,
+        },
+      ],
+      isError: true,
+    };
+  });
 
   return server;
 }

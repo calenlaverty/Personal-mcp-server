@@ -70,7 +70,7 @@ HEVY_API_BASE_URL=https://api.hevyapp.com
 
 # Transport configuration
 TRANSPORT=stdio                    # stdio | sse | both
-PORT=3000                          # Port for SSE/HTTP mode
+PORT=3004                          # Port for SSE/HTTP mode
 HOST=127.0.0.1                     # Host for SSE/HTTP mode
 
 # SSE Configuration (for Poke.com)
@@ -176,7 +176,7 @@ npm start
 
 ```bash
 # In a separate terminal
-ngrok http 3000
+ngrok http 3004
 ```
 
 #### 4. Connect to Poke.com:
@@ -244,7 +244,7 @@ npm run watch
                  ↓
     ┌─────────────────────────────────┐
     │     Hevy MCP Server             │
-    │   Port 3000 (configurable)      │
+    │   Port 3004 (configurable)      │
     │   SSE + HTTP / stdio            │
     └────────────┬────────────────────┘
                  │
@@ -306,9 +306,10 @@ Make sure you've:
 ### SSE connection issues with Poke.com
 
 1. Verify ngrok is running and the URL is correct
-2. Check that the server is running: `curl http://localhost:3000/health`
-3. Ensure firewall allows connections on port 3000
+2. Check that the server is running: `curl http://localhost:3004/health`
+3. Ensure firewall allows connections on port 3004
 4. Check server logs for errors
+5. Verify all 20 tools are discoverable in Poke's integration settings
 
 ### "Unauthorized" error (401) with SSE mode
 

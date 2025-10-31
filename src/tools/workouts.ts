@@ -10,9 +10,9 @@ import {
   safeValidateInput,
 } from '../utils/validators.js';
 
-export function registerWorkoutTools(server: Server, client: HevyClient) {
-  // Define workout tools
-  const workoutTools = [
+// Export workout tool definitions
+export function getWorkoutTools() {
+  return [
     {
       name: 'get-workouts',
       description:
@@ -199,16 +199,12 @@ export function registerWorkoutTools(server: Server, client: HevyClient) {
       },
     },
   ];
+}
 
-  // Register tool list handler
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: workoutTools,
-  }));
-
-  // Register tool call handler
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    try {
-      switch (request.params.name) {
+// Handle workout tool calls
+export async function handleWorkoutToolCall(request: any, client: HevyClient) {
+  try {
+    switch (request.params.name) {
         case 'get-workouts': {
           const validation = safeValidateInput(
             WorkoutQueryParamsSchema,
@@ -354,15 +350,7 @@ export function registerWorkoutTools(server: Server, client: HevyClient) {
         }
 
         default:
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Unknown tool: ${request.params.name}`,
-              },
-            ],
-            isError: true,
-          };
+          return null; // Tool not handled by this module
       }
     } catch (error) {
       return {
@@ -375,5 +363,4 @@ export function registerWorkoutTools(server: Server, client: HevyClient) {
         isError: true,
       };
     }
-  });
 }

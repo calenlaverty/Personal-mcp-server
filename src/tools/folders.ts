@@ -5,9 +5,9 @@ import { handleToolError } from '../utils/errors.js';
 import { CreateFolderInputSchema, safeValidateInput } from '../utils/validators.js';
 import { RoutineFolder } from '../hevy/types.js';
 
-export function registerFolderTools(server: Server, client: HevyClient) {
-  // Define folder tools
-  const folderTools = [
+// Export folder tool definitions
+export function getFolderTools() {
+  return [
     {
       name: 'get-routine-folders',
       description: 'Get a list of all routine folders. Use folders to organize your workout routines.',
@@ -77,16 +77,12 @@ export function registerFolderTools(server: Server, client: HevyClient) {
       },
     },
   ];
+}
 
-  // Register tool list handler
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: folderTools,
-  }));
-
-  // Register tool call handler
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    try {
-      switch (request.params.name) {
+// Handle folder tool calls
+export async function handleFolderToolCall(request: any, client: HevyClient) {
+  try {
+    switch (request.params.name) {
         case 'get-routine-folders': {
           const folders = await client.getRoutineFolders();
 
@@ -235,15 +231,7 @@ export function registerFolderTools(server: Server, client: HevyClient) {
         }
 
         default:
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Unknown tool: ${request.params.name}`,
-              },
-            ],
-            isError: true,
-          };
+          return null; // Tool not handled by this module
       }
     } catch (error) {
       return {
@@ -256,5 +244,4 @@ export function registerFolderTools(server: Server, client: HevyClient) {
         isError: true,
       };
     }
-  });
 }

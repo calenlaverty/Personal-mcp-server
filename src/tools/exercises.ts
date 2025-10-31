@@ -9,9 +9,9 @@ import {
   safeValidateInput,
 } from '../utils/validators.js';
 
-export function registerExerciseTools(server: Server, client: HevyClient) {
-  // Define exercise tools
-  const exerciseTools = [
+// Export exercise tool definitions
+export function getExerciseTools() {
+  return [
     {
       name: 'get-exercise-templates',
       description:
@@ -91,16 +91,12 @@ export function registerExerciseTools(server: Server, client: HevyClient) {
       },
     },
   ];
+}
 
-  // Register tool list handler
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: exerciseTools,
-  }));
-
-  // Register tool call handler
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    try {
-      switch (request.params.name) {
+// Handle exercise tool calls
+export async function handleExerciseToolCall(request: any, client: HevyClient) {
+  try {
+    switch (request.params.name) {
         case 'get-exercise-templates': {
           const validation = safeValidateInput(
             PaginationParamsSchema,
@@ -240,15 +236,7 @@ export function registerExerciseTools(server: Server, client: HevyClient) {
         }
 
         default:
-          return {
-            content: [
-              {
-                type: 'text',
-                text: `Unknown tool: ${request.params.name}`,
-              },
-            ],
-            isError: true,
-          };
+          return null; // Tool not handled by this module
       }
     } catch (error) {
       return {
@@ -261,5 +249,4 @@ export function registerExerciseTools(server: Server, client: HevyClient) {
         isError: true,
       };
     }
-  });
 }

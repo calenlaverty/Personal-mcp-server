@@ -31,6 +31,9 @@ interface Session {
 // Session storage (in-memory, could be Redis for production)
 const sessions = new Map<string, Session>();
 
+// Store transports by sessionId for message routing
+const transports = new Map<string, SSEServerTransport>();
+
 // Clean up expired sessions periodically
 setInterval(() => {
   const now = Date.now();
@@ -225,14 +228,14 @@ export function createSSETransport(
 
     const transport = new SSEServerTransport(config.ssePath, res);
 
-    // Store transport by its sessionId for message routing
-    const sessionId = (transport as any).sessionId;
-    if (sessionId) {
+    // Store transport by sessionId for message routing
+    const transportSessionId = (transport as any).sessionId;
+    if (transportSessionId) {
       // Set the session ID header for the client
-      res.setHeader('Mcp-Session-Id', sessionId);
+      res.setHeader('Mcp-Session-Id', transportSessionId);
 
-      transports.set(sessionId, transport);
-      console.error(`Stored transport for session: ${sessionId}`);
+      transports.set(transportSessionId, transport);
+      logger.info('Transport stored for session', { sessionId: transportSessionId });
     }
 
     await server.connect(transport);

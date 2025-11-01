@@ -1,6 +1,21 @@
 import { z } from 'zod';
 import { sanitizeText } from './security.js';
 
+// Helper to convert string "undefined", "null", empty strings to undefined
+// This ensures MCP clients sending "undefined" as a string get it converted properly
+const optionalString = () => {
+  return z
+    .union([z.string(), z.undefined()])
+    .optional()
+    .transform((val) => {
+      // Convert string "undefined", "null", or empty string to undefined
+      if (val === 'undefined' || val === 'null' || val === '') {
+        return undefined;
+      }
+      return val;
+    });
+};
+
 // Sanitized string schema helper that also validates length
 const sanitizedString = (maxLength: number = 10000, minLength: number = 0) => {
   let schema = z.string();
@@ -23,7 +38,7 @@ export const ExerciseSetSchema = z.object({
 // Workout Exercise Schema
 export const WorkoutExerciseSchema = z.object({
   exercise_template_id: z.string(),
-  superset_id: z.string().optional().nullable(),
+  superset_id: optionalString().nullable(),
   notes: sanitizedString(5000).optional(),
   sets: z.array(ExerciseSetSchema),
 });
@@ -49,7 +64,7 @@ export const UpdateWorkoutInputSchema = z.object({
 // Routine Exercise Schema
 export const RoutineExerciseSchema = z.object({
   exercise_template_id: z.string(),
-  superset_id: z.string().optional().nullable(),
+  superset_id: optionalString().nullable(),
   notes: sanitizedString(5000).optional(),
   sets: z.array(ExerciseSetSchema),
 });
@@ -57,14 +72,14 @@ export const RoutineExerciseSchema = z.object({
 // Create Routine Input Schema
 export const CreateRoutineInputSchema = z.object({
   title: sanitizedString(200, 1),
-  folder_id: z.string().optional(),
+  folder_id: optionalString(),
   exercises: z.array(RoutineExerciseSchema),
 });
 
 // Update Routine Input Schema
 export const UpdateRoutineInputSchema = z.object({
   title: sanitizedString(200, 1).optional(),
-  folder_id: z.string().optional(),
+  folder_id: optionalString(),
   exercises: z.array(RoutineExerciseSchema).optional(),
 });
 

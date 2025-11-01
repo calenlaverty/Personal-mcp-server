@@ -29,6 +29,20 @@ export class HevyClient {
     this.baseUrl = config.baseUrl || 'https://api.hevyapp.com';
   }
 
+  /**
+   * Remove undefined and null values from an object
+   * This prevents sending "undefined" as a string to the API
+   */
+  private cleanPayload<T extends Record<string, any>>(obj: T): Partial<T> {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined && value !== null) {
+        cleaned[key] = value;
+      }
+    }
+    return cleaned;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
@@ -120,14 +134,14 @@ export class HevyClient {
   async createWorkout(data: CreateWorkoutInput): Promise<Workout> {
     return this.request<Workout>('/v1/workouts', {
       method: 'POST',
-      body: JSON.stringify({ workout: data }),
+      body: JSON.stringify({ workout: this.cleanPayload(data) }),
     });
   }
 
   async updateWorkout(id: string, data: UpdateWorkoutInput): Promise<Workout> {
     return this.request<Workout>(`/v1/workouts/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: JSON.stringify({ workout: data }),
+      body: JSON.stringify({ workout: this.cleanPayload(data) }),
     });
   }
 
@@ -170,14 +184,14 @@ export class HevyClient {
   async createRoutine(data: CreateRoutineInput): Promise<Routine> {
     return this.request<Routine>('/v1/routines', {
       method: 'POST',
-      body: JSON.stringify({ routine: data }),
+      body: JSON.stringify({ routine: this.cleanPayload(data) }),
     });
   }
 
   async updateRoutine(id: string, data: UpdateRoutineInput): Promise<Routine> {
     return this.request<Routine>(`/v1/routines/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: JSON.stringify({ routine: data }),
+      body: JSON.stringify({ routine: this.cleanPayload(data) }),
     });
   }
 
@@ -246,14 +260,14 @@ export class HevyClient {
   async createRoutineFolder(data: CreateFolderInput): Promise<RoutineFolder> {
     return this.request<RoutineFolder>('/v1/routine_folders', {
       method: 'POST',
-      body: JSON.stringify({ folder: data }),
+      body: JSON.stringify({ folder: this.cleanPayload(data) }),
     });
   }
 
   async updateRoutineFolder(id: string, data: CreateFolderInput): Promise<RoutineFolder> {
     return this.request<RoutineFolder>(`/v1/routine_folders/${encodeURIComponent(id)}`, {
       method: 'PUT',
-      body: JSON.stringify({ folder: data }),
+      body: JSON.stringify({ folder: this.cleanPayload(data) }),
     });
   }
 
@@ -280,7 +294,7 @@ export class HevyClient {
   async createWebhookSubscription(data: CreateWebhookInput): Promise<WebhookSubscription> {
     return this.request<WebhookSubscription>('/v1/webhooks/subscription', {
       method: 'POST',
-      body: JSON.stringify({ webhook: data }),
+      body: JSON.stringify({ webhook: this.cleanPayload(data) }),
     });
   }
 

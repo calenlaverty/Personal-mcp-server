@@ -522,9 +522,21 @@ Estimated costs for this server:
 - **Light use**: ~$1-2/month (occasional API calls)
 - **Heavy use**: ~$3-5/month (frequent AI agent interactions)
 
-## API Rate Limits
+## Rate Limiting
 
-The Hevy API may have rate limits. The server doesn't currently implement rate limiting or caching, so be mindful of the number of requests.
+### MCP Server Rate Limits (SSE Mode)
+
+The server implements rate limiting to protect against abuse:
+
+- **General requests**: 1,000 requests per 15 minutes per IP
+- **Authentication attempts**: 50 requests per 15 minutes per IP
+- **Health checks**: Exempt from rate limiting
+
+If you encounter rate limiting issues, you can adjust the limits in `src/transports/sse.ts`.
+
+### Hevy API Rate Limits
+
+The upstream Hevy API may also have its own rate limits. Be mindful of the number of requests when performing bulk operations or frequent polling.
 
 ## Contributing
 

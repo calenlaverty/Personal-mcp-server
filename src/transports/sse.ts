@@ -205,8 +205,15 @@ export function createSSETransport(
     next();
   };
 
-  // OAuth Bearer token authentication for MCP endpoints
-  // Skip auth for: health check, OAuth endpoints, and metadata endpoints
+  // Authentication middleware
+  // Can be disabled with DISABLE_AUTH=true for testing or if using external auth
+  const authDisabled = process.env.DISABLE_AUTH === 'true';
+
+  if (authDisabled) {
+    logger.warn('⚠️  Authentication is DISABLED - server is open to all connections!');
+    logger.warn('⚠️  Set DISABLE_AUTH=false or remove the variable to enable OAuth authentication');
+  }
+
   app.use((req, res, next) => {
     // Public endpoints that don't require authentication
     const publicPaths = [
@@ -218,6 +225,15 @@ export function createSSETransport(
     ];
 
     if (publicPaths.includes(req.path)) {
+      return next();
+    }
+
+    // If auth is disabled, allow all requests through
+    if (authDisabled) {
+      logger.info('Auth disabled - allowing unauthenticated request:', {
+        path: req.path,
+        method: req.method
+      });
       return next();
     }
 

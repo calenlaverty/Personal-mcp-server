@@ -100,12 +100,22 @@ export class HAClient {
   async callService(data: HAServiceCallData): Promise<HAState[]> {
     const { domain, service, service_data, target } = data;
 
-    const payload: any = {};
-    if (service_data) {
-      payload.service_data = service_data;
-    }
+    // Home Assistant expects a flat payload with service_data and target fields merged at root level
+    const payload: any = {
+      ...service_data,
+    };
+
     if (target) {
-      payload.target = target;
+      // Merge target fields into the root payload
+      if (target.entity_id) {
+        payload.entity_id = target.entity_id;
+      }
+      if (target.device_id) {
+        payload.device_id = target.device_id;
+      }
+      if (target.area_id) {
+        payload.area_id = target.area_id;
+      }
     }
 
     return this.request<HAState[]>(

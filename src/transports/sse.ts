@@ -217,6 +217,7 @@ export function createSSETransport(
   app.use((req, res, next) => {
     // Public endpoints that don't require authentication
     const publicPaths = [
+      '/',
       '/health',
       '/authorize',
       '/token',
@@ -243,6 +244,27 @@ export function createSSETransport(
 
   // Session management middleware
   app.use(validateSession);
+
+  // Root endpoint - provides server info and SSE endpoint location
+  app.get('/', (req: Request, res: Response) => {
+    res.json({
+      name: 'hevy-mcp-server',
+      version: '1.0.0',
+      description: 'MCP server for Hevy workout tracking',
+      transport: 'sse',
+      endpoints: {
+        sse: config.ssePath,
+        health: '/health',
+        oauth_authorization_server: '/.well-known/oauth-authorization-server',
+        oauth_protected_resource: '/.well-known/oauth-protected-resource'
+      },
+      capabilities: {
+        tools: true,
+        resources: false,
+        prompts: false
+      }
+    });
+  });
 
   // Health check endpoint
   app.get('/health', (req: Request, res: Response) => {

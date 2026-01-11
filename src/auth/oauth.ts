@@ -311,11 +311,16 @@ export function validateBearerToken(baseUrl?: string) {
           ? `${baseUrl}/.well-known/oauth-protected-resource`
           : '/.well-known/oauth-protected-resource';
 
-        res.setHeader(
-          'WWW-Authenticate',
-          `Bearer resource_metadata="${resourceMetadataUrl}", scope="mcp"`
-        );
-        res.status(401).json({
+        const wwwAuthHeader = `Bearer resource_metadata="${resourceMetadataUrl}", scope="mcp"`;
+
+        logger.info('Sending 401 with WWW-Authenticate header:', {
+          header: wwwAuthHeader,
+          resourceMetadataUrl
+        });
+
+        res.status(401);
+        res.setHeader('WWW-Authenticate', wwwAuthHeader);
+        res.json({
           error: 'invalid_token',
           error_description: 'Missing or invalid Authorization header'
         });

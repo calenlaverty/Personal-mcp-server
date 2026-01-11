@@ -8,6 +8,13 @@ import { createServer as createHttpServer } from 'http';
 import { readFileSync } from 'fs';
 import { secureCompare, sanitizeErrorMessage } from '../utils/security.js';
 import { logger } from '../utils/logger.js';
+import {
+  handleAuthorize,
+  handleToken,
+  validateBearerToken,
+  handleProtectedResourceMetadata,
+  handleAuthorizationServerMetadata
+} from '../auth/oauth.js';
 
 export interface SSETransportConfig {
   port: number;
@@ -142,6 +149,29 @@ export function createSSETransport(
     skipSuccessfulRequests: true,
   });
 
+  // Determine base URL for OAuth endpoints
+  const protocol = config.enableHttps ? 'https' : 'http';
+  const baseUrl = process.env.BASE_URL ||
+    process.env.RAILWAY_PUBLIC_DOMAIN
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : `${protocol}://${config.host}:${config.port}`;
+
+  logger.info('OAuth base URL:', { baseUrl });
+
+  // OAuth 2.1 Authorization Server Metadata (RFC 8414)
+  // Must be accessible without authentication
+  app.get('/.well-known/oauth-authorization-server', handleAuthorizationServerMetadata(baseUrl));
+
+  // Protected Resource Metadata (RFC 9728)
+  // Must be accessible without authentication
+  app.get('/.well-known/oauth-protected-resource', handleProtectedResourceMetadata(baseUrl, baseUrl));
+
+  // OAuth authorization endpoint (public)
+  app.get('/authorize', handleAuthorize(baseUrl, config.authToken || ''));
+
+  // OAuth token endpoint (public)
+  app.post('/token', handleToken(config.authToken || ''));
+
   // Session validation middleware
   const validateSession = (req: Request, res: Response, next: NextFunction) => {
     const sessionId = req.headers['mcp-session-id'] as string;
@@ -171,108 +201,25 @@ export function createSSETransport(
     next();
   };
 
-  // Authentication middleware with constant-time comparison
-  if (config.authToken) {
-    app.use((req, res, next) => {
-      // Skip auth for health check
-      if (req.path === '/health') {
-        return next();
-      }
+  // OAuth Bearer token authentication for MCP endpoints
+  // Skip auth for: health check, OAuth endpoints, and metadata endpoints
+  app.use((req, res, next) => {
+    // Public endpoints that don't require authentication
+    const publicPaths = [
+      '/health',
+      '/authorize',
+      '/token',
+      '/.well-known/oauth-authorization-server',
+      '/.well-known/oauth-protected-resource'
+    ];
 
-      // Apply auth rate limiting
-      authLimiter(req, res, () => {
-        // Log all incoming headers for debugging
-        logger.info('Auth attempt - all headers:', {
-          headers: JSON.stringify(req.headers),
-          path: req.path,
-          method: req.method,
-          ip: req.ip,
-          query: JSON.stringify(req.query)
-        });
+    if (publicPaths.includes(req.path)) {
+      return next();
+    }
 
-        // Try multiple token extraction methods for compatibility with different clients
-        let token: string | undefined;
-
-        // Method 1: Standard Authorization header with Bearer prefix
-        const authHeader = req.headers.authorization;
-        if (authHeader) {
-          logger.info('Authorization header found:', { authHeader });
-          token = authHeader.replace(/^Bearer\s+/i, '');
-        }
-
-        // Method 2: OAuth-related headers (Claude.ai "OAuth Client Secret" field)
-        if (!token && req.headers['client-secret']) {
-          logger.info('Found token in client-secret header');
-          token = req.headers['client-secret'] as string;
-        }
-
-        if (!token && req.headers['x-client-secret']) {
-          logger.info('Found token in x-client-secret header');
-          token = req.headers['x-client-secret'] as string;
-        }
-
-        if (!token && req.headers['oauth-client-secret']) {
-          logger.info('Found token in oauth-client-secret header');
-          token = req.headers['oauth-client-secret'] as string;
-        }
-
-        // Method 3: Check for token in various custom headers
-        if (!token && req.headers['x-api-key']) {
-          logger.info('Found token in X-API-Key header');
-          token = req.headers['x-api-key'] as string;
-        }
-
-        if (!token && req.headers['api-key']) {
-          logger.info('Found token in API-Key header');
-          token = req.headers['api-key'] as string;
-        }
-
-        // Method 4: Check query parameters (less secure but useful for debugging)
-        if (!token && req.query.token) {
-          logger.info('Found token in query parameter');
-          token = req.query.token as string;
-        }
-
-        if (!token && req.query.auth) {
-          logger.info('Found token in auth query parameter');
-          token = req.query.auth as string;
-        }
-
-        if (!token) {
-          logger.authFailure('no_token_found', req.ip);
-          logger.info('No token found in any expected location. All headers:', {
-            headerKeys: Object.keys(req.headers),
-            queryKeys: Object.keys(req.query)
-          });
-          res.status(401).json({
-            error: 'Unauthorized',
-            message: 'No authentication token found. Expected in Authorization header (Bearer token), X-API-Key header, or API-Key header.'
-          });
-          return;
-        }
-
-        logger.info('Comparing token:', {
-          tokenLength: token.length,
-          expectedLength: config.authToken!.length,
-          tokenPreview: token.substring(0, 10) + '...',
-          expectedPreview: config.authToken!.substring(0, 10) + '...'
-        });
-
-        if (!secureCompare(token, config.authToken!)) {
-          logger.authFailure('invalid_token', req.ip);
-          res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Invalid authentication token'
-          });
-          return;
-        }
-
-        logger.authAttempt(true, req.ip, req.headers['mcp-session-id'] as string);
-        logger.info('Authentication successful!');
-        next();
-      });
-    });
-  }
+    // For MCP endpoints, require OAuth bearer token
+    validateBearerToken(req, res, next);
+  });
 
   // Session management middleware
   app.use(validateSession);

@@ -1,4 +1,5 @@
-# Hevy + Home Assistant MCP Server
+
+# Personal MCP Server
 
 Unified Model Context Protocol (MCP) server providing AI assistant access to:
 - **Hevy** - Workout tracking and fitness data
@@ -30,8 +31,13 @@ Single server, single Tailscale funnel, dual functionality.
 
 ### 1. Install
 ```bash
-git clone https://github.com/calenlaverty/hevy-mcp-server
-cd hevy-mcp-server
+npm install
+```
+
+### 1. Install
+```bash
+git clone https://github.com/calenlaverty/Personal-mcp-server
+cd Personal-mcp-server
 npm install
 ```
 
@@ -72,9 +78,9 @@ Edit Claude Desktop config:
 ```json
 {
   "mcpServers": {
-    "hevy-ha": {
+   "personal-mcp": {
       "command": "node",
-      "args": ["/absolute/path/to/hevy-mcp-server/dist/index.js"],
+      "args": ["/absolute/path/to/Personal-mcp-server/dist/index.js"],
       "env": {
         "HEVY_API_KEY": "your_hevy_api_key",
         "HA_BASE_URL": "http://homeassistant.local:8123/api",
@@ -120,7 +126,7 @@ For Claude.ai or other remote clients:
 
 ## Example Queries
 
-**Hevy:**
+**Fitness (Hevy):**
 - "Show my last 5 workouts"
 - "What's my bench press PR?"
 - "Create a push day routine"
@@ -178,10 +184,10 @@ src/
 │   ├── client.ts              # Home Assistant API wrapper
 │   └── types.ts               # HA types
 ├── tools/
-│   ├── workouts.ts            # Hevy workout tools
-│   ├── routines.ts            # Hevy routine tools
-│   ├── exercises.ts           # Hevy exercise tools
-│   ├── folders.ts             # Hevy folder tools
+│   ├── workouts.ts            # Fitness workout tools
+│   ├── routines.ts            # Fitness routine tools
+│   ├── exercises.ts           # Fitness exercise tools
+│   ├── folders.ts             # Fitness folder tools
 │   └── ha.ts                  # Home Assistant tools
 ├── transports/
 │   ├── stdio.ts               # Claude Desktop transport

@@ -1,7 +1,7 @@
 {
-  "name": "hevy-ha-mcp-server",
+  "name": "personal-mcp-server",
   "version": "1.0.0",
-  "description": "Unified MCP server for Hevy workout tracking and Home Assistant with dual transport support (stdio + SSE)",
+  "description": "Unified MCP server for personal fitness, smart home, and more (Hevy, Home Assistant, and future integrations) with dual transport support (stdio + SSE)",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -24,12 +24,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/calenlaverty/hevy-mcp-server.git"
+    "url": "https://github.com/calenlaverty/Personal-mcp-server.git"
   },
   "bugs": {
-    "url": "https://github.com/calenlaverty/hevy-mcp-server/issues"
+    "url": "https://github.com/calenlaverty/Personal-mcp-server/issues"
   },
-  "homepage": "https://github.com/calenlaverty/hevy-mcp-server#readme",
+  "homepage": "https://github.com/calenlaverty/Personal-mcp-server#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "dotenv": "^16.0.0",

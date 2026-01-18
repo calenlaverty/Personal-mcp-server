@@ -90,6 +90,21 @@ export function getExerciseTools() {
         required: ['exercise_template_id'],
       },
     },
+    {
+      name: 'search-exercises',
+      description:
+        'Search for exercises by name. Returns matching exercise templates with IDs and muscle groups. Use this to quickly find exercise IDs without pagination.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          query: {
+            type: 'string',
+            description: 'Search term to find exercises (e.g., "bench", "squat", "deadlift")',
+          },
+        },
+        required: ['query'],
+      },
+    },
   ];
 }
 
@@ -230,6 +245,26 @@ export async function handleExerciseToolCall(request: any, client: HevyClient) {
               {
                 type: 'text',
                 text: lines.join('\n'),
+              },
+            ],
+          };
+        }
+
+        case 'search-exercises': {
+          const { query } = request.params.arguments as { query: string };
+          if (!query) {
+            return {
+              content: [{ type: 'text', text: 'Error: query is required' }],
+              isError: true,
+            };
+          }
+
+          const exercises = await client.searchExerciseTemplates(query);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: formatExerciseTemplateList(exercises),
               },
             ],
           };

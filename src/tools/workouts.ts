@@ -2,7 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { HevyClient } from '../hevy/client.js';
 import { handleToolError } from '../utils/errors.js';
-import { formatWorkout, formatWorkoutList } from '../utils/formatters.js';
+import { formatWorkout, formatWorkoutList, formatWorkoutSummary, formatLiftProgression } from '../utils/formatters.js';
 import {
   CreateWorkoutInputSchema,
   UpdateWorkoutInputSchema,
@@ -198,6 +198,59 @@ export function getWorkoutTools() {
         required: ['sinceDate'],
       },
     },
+    {
+      name: 'get-workout-summary',
+      description:
+        'Get recent workouts with FULL details including exercise names, sets, weights, and reps - all in a single call. Much more efficient than calling get-workouts + get-workout for each. Use this when you need to see recent training history.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          count: {
+            type: 'number',
+            description: 'Number of recent workouts to fetch (default: 10, max: 30)',
+            default: 10,
+          },
+          exerciseFilter: {
+            type: 'string',
+            description: 'Optional filter to only show specific exercises (e.g., "bench", "squat")',
+          },
+        },
+      },
+    },
+    {
+      name: 'get-lift-progression',
+      description:
+        'Track progression on specific lifts with optional goal targets. Returns estimated 1RM, progress percentage toward goals, PRs, trends, and recent session history. Perfect for checking progress toward strength goals like "100kg bench".',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          exercises: {
+            type: 'array',
+            description: 'Array of exercises to track with optional goals',
+            items: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string',
+                  description: 'Exercise name to search for (e.g., "Bench Press (Barbell)", "Squat", "Deadlift")',
+                },
+                goalKg: {
+                  type: 'number',
+                  description: 'Optional target weight in kg to track progress toward',
+                },
+              },
+              required: ['name'],
+            },
+          },
+          lookbackDays: {
+            type: 'number',
+            description: 'How many days back to analyze for trends (default: 90)',
+            default: 90,
+          },
+        },
+        required: ['exercises'],
+      },
+    },
   ];
 }
 
@@ -344,6 +397,50 @@ export async function handleWorkoutToolCall(request: any, client: HevyClient) {
               {
                 type: 'text',
                 text: JSON.stringify(events, null, 2),
+              },
+            ],
+          };
+        }
+
+        case 'get-workout-summary': {
+          const { count = 10, exerciseFilter } = request.params.arguments as {
+            count?: number;
+            exerciseFilter?: string;
+          };
+
+          // Limit count to 30 max
+          const limitedCount = Math.min(count, 30);
+
+          const summaries = await client.getWorkoutSummaries(limitedCount, exerciseFilter);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: formatWorkoutSummary(summaries),
+              },
+            ],
+          };
+        }
+
+        case 'get-lift-progression': {
+          const { exercises, lookbackDays = 90 } = request.params.arguments as {
+            exercises: { name: string; goalKg?: number }[];
+            lookbackDays?: number;
+          };
+
+          if (!exercises || exercises.length === 0) {
+            return {
+              content: [{ type: 'text', text: 'Error: exercises array is required' }],
+              isError: true,
+            };
+          }
+
+          const results = await client.getLiftProgression(exercises, lookbackDays);
+          return {
+            content: [
+              {
+                type: 'text',
+                text: formatLiftProgression(results),
               },
             ],
           };

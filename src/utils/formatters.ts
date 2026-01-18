@@ -1,4 +1,4 @@
-import { Workout, ExerciseTemplate, Routine, ExerciseSet } from '../hevy/types.js';
+import { Workout, ExerciseTemplate, Routine, ExerciseSet, LiftProgressionResult, WorkoutSummaryItem } from '../hevy/types.js';
 
 // Capitalize first letter of each word in a title
 function capitalizeTitle(title: string | undefined | null): string {
@@ -217,6 +217,138 @@ export function formatExerciseTemplateList(exercises: ExerciseTemplate[]): strin
     lines.push(`${idx + 1}. **${exercise.title}**${exercise.is_custom ? ' (Custom)' : ''}`);
     lines.push(`   ID: ${exercise.id}`);
     lines.push(`   Primary: ${exercise.primary_muscle_group}`);
+    lines.push('');
+  });
+
+  return lines.join('\n');
+}
+
+// Format workout summary for aggregated view
+export function formatWorkoutSummary(summaries: WorkoutSummaryItem[]): string {
+  if (summaries.length === 0) {
+    return 'No workouts found.';
+  }
+
+  const lines: string[] = [`# Recent Workouts (${summaries.length})\n`];
+
+  summaries.forEach((workout) => {
+    const date = new Date(workout.date).toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    lines.push(`## ${workout.title}`);
+    lines.push(`**${date}** | ${workout.duration}`);
+    lines.push('');
+
+    workout.exercises.forEach((ex) => {
+      const setsStr = ex.sets
+        .filter((s) => s.type !== 'warmup')
+        .map((s) => {
+          if (s.weight_kg && s.reps) {
+            return `${s.weight_kg}kg x ${s.reps}`;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .join(', ');
+
+      const bestStr = ex.bestSet
+        ? ` | Best: **${ex.bestSet.weight_kg}kg x ${ex.bestSet.reps}**`
+        : '';
+
+      lines.push(`- **${ex.name}**: ${setsStr}${bestStr}`);
+    });
+
+    lines.push('');
+  });
+
+  return lines.join('\n');
+}
+
+// Format lift progression report
+export function formatLiftProgression(results: LiftProgressionResult[]): string {
+  if (results.length === 0) {
+    return 'No lift progression data available.';
+  }
+
+  const lines: string[] = ['# Lift Progression Report\n'];
+
+  results.forEach((result) => {
+    lines.push(`## ${result.exerciseName}`);
+
+    if (result.exerciseId === 'NOT_FOUND') {
+      lines.push('*Exercise not found in templates. Check the exercise name.*');
+      lines.push('');
+      return;
+    }
+
+    // Goal and progress line
+    if (result.goalKg) {
+      const current = result.currentEstimated1RM
+        ? `${Math.round(result.currentEstimated1RM * 10) / 10} kg`
+        : 'N/A';
+      const progress = result.progressPercent ? `${result.progressPercent}%` : 'N/A';
+      lines.push(`- **Goal:** ${result.goalKg} kg | **Current 1RM:** ${current} | **Progress:** ${progress}`);
+
+      if (result.remainingKg !== undefined && result.remainingKg > 0) {
+        lines.push(`- **Remaining:** ${result.remainingKg} kg to goal`);
+      } else if (result.remainingKg === 0) {
+        lines.push(`- **Goal reached!**`);
+      }
+    } else if (result.currentEstimated1RM) {
+      lines.push(`- **Current Estimated 1RM:** ${Math.round(result.currentEstimated1RM * 10) / 10} kg`);
+    }
+
+    // PRs
+    if (result.personalRecords.length > 0) {
+      const weightPR = result.personalRecords.find((pr) => pr.type === 'weight');
+      if (weightPR) {
+        const prDate = new Date(weightPR.date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+        lines.push(`- **Weight PR:** ${weightPR.value} ${weightPR.unit} (${prDate})`);
+      }
+    }
+
+    // Trend
+    const trendEmoji = {
+      improving: '📈',
+      plateau: '➡️',
+      declining: '📉',
+      insufficient_data: '❓',
+    }[result.trend];
+
+    const trendText = {
+      improving: 'Improving',
+      plateau: 'Plateau',
+      declining: 'Declining',
+      insufficient_data: 'Insufficient data',
+    }[result.trend];
+
+    const deltaStr = result.trendDeltaKg
+      ? ` (${result.trendDeltaKg > 0 ? '+' : ''}${result.trendDeltaKg} kg)`
+      : '';
+
+    lines.push(`- **Trend:** ${trendEmoji} ${trendText}${deltaStr}`);
+
+    // Recent sessions
+    if (result.recentSessions.length > 0) {
+      lines.push('');
+      lines.push('**Recent Sessions:**');
+      result.recentSessions.forEach((session) => {
+        const sessionDate = new Date(session.date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        });
+        const setsStr = session.topSets.map((s) => `${s.weight_kg}kg x ${s.reps}`).join(', ');
+        lines.push(`- ${sessionDate}: ${setsStr || 'No working sets'}`);
+      });
+    }
+
     lines.push('');
   });
 

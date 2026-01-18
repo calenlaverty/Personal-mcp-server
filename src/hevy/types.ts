@@ -198,3 +198,40 @@ export interface ExerciseProgressParams {
   end_date?: string;
   limit?: number;
 }
+
+// Aggregation types for optimized queries
+
+export interface LiftGoal {
+  name: string;
+  goalKg?: number;
+}
+
+export interface LiftProgressionResult {
+  exerciseName: string;
+  exerciseId: string;
+  goalKg?: number;
+  currentEstimated1RM?: number;
+  progressPercent?: number;
+  remainingKg?: number;
+  personalRecords: PersonalRecord[];
+  trend: 'improving' | 'plateau' | 'declining' | 'insufficient_data';
+  trendDeltaKg?: number;
+  recentSessions: {
+    date: string;
+    workoutId: string;
+    topSets: { weight_kg: number; reps: number }[];
+  }[];
+}
+
+export interface WorkoutSummaryItem {
+  id: string;
+  title: string;
+  date: string;
+  duration: string;
+  exercises: {
+    name: string;
+    exerciseId: string;
+    sets: ExerciseSet[];
+    bestSet?: { weight_kg: number; reps: number };
+  }[];
+}

@@ -14,7 +14,8 @@ function capitalizeTitle(title: string | undefined | null): string {
 }
 
 // Format workout for display
-export function formatWorkout(workout: Workout): string {
+// exerciseNameMap is optional - if provided, exercise names will be resolved from IDs
+export function formatWorkout(workout: Workout, exerciseNameMap?: Map<string, string>): string {
   const lines: string[] = [];
 
   const title = capitalizeTitle(workout.title) || 'Untitled Workout';
@@ -34,7 +35,10 @@ export function formatWorkout(workout: Workout): string {
     lines.push('No exercises recorded.');
   } else {
     workout.exercises.forEach((exercise, idx) => {
-      lines.push(`### ${idx + 1}. Exercise ID: ${exercise.exercise_template_id}`);
+      // Resolve exercise name if map provided, otherwise show ID
+      const exerciseName = exerciseNameMap?.get(exercise.exercise_template_id)
+        || exercise.exercise_template_id;
+      lines.push(`### ${idx + 1}. ${exerciseName}`);
       if (exercise.superset_id) {
         lines.push(`   *Superset ID: ${exercise.superset_id}*`);
       }

@@ -16,7 +16,7 @@ export function getWorkoutTools() {
     {
       name: 'get-workouts',
       description:
-        'Get a list of workouts with optional date filtering and pagination. Returns workout summaries including title, ID, date, and exercise count.',
+        'Get a list of workouts with optional date filtering and pagination. Returns workout summaries (title, ID, date, exercise count) but NOT full details. Use get-workout for full details of a specific workout, or get-workout-summary for recent workouts with all details in one call.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -44,7 +44,7 @@ export function getWorkoutTools() {
     {
       name: 'get-workout',
       description:
-        'Get detailed information about a specific workout by ID. Returns full workout details including all exercises, sets, weights, reps, and notes.',
+        'Get detailed information about a specific workout by ID. Returns full workout details including exercise names, sets, weights, reps, and notes. Exercise names are automatically resolved.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -201,7 +201,7 @@ export function getWorkoutTools() {
     {
       name: 'get-workout-summary',
       description:
-        'Get recent workouts with FULL details including exercise names, sets, weights, and reps - all in a single call. Much more efficient than calling get-workouts + get-workout for each. Use this when you need to see recent training history.',
+        'RECOMMENDED for viewing recent training history. Returns multiple recent workouts with full details (exercise names, sets, weights, reps) in a single call. More efficient than get-workouts + get-workout when you need to see several recent workouts at once.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -296,12 +296,16 @@ export async function handleWorkoutToolCall(request: any, client: HevyClient) {
             };
           }
 
-          const workout = await client.getWorkout(id);
+          // Fetch workout and exercise name map in parallel
+          const [workout, exerciseNameMap] = await Promise.all([
+            client.getWorkout(id),
+            client.getExerciseNameMap(),
+          ]);
           return {
             content: [
               {
                 type: 'text',
-                text: formatWorkout(workout),
+                text: formatWorkout(workout, exerciseNameMap),
               },
             ],
           };

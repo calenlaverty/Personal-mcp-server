@@ -328,6 +328,17 @@ export class HevyClient {
   private exerciseTemplateCache: ExerciseTemplate[] | null = null;
 
   /**
+   * Ensure exercise templates are cached and return a Map of ID -> title
+   * Useful for resolving exercise names in workout responses
+   */
+  async getExerciseNameMap(): Promise<Map<string, string>> {
+    if (!this.exerciseTemplateCache) {
+      await this.searchExerciseTemplates('');
+    }
+    return new Map(this.exerciseTemplateCache!.map((t) => [t.id, t.title]));
+  }
+
+  /**
    * Search exercise templates by name (case-insensitive)
    * Caches all templates on first call for fast subsequent searches
    */
